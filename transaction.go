@@ -25,7 +25,7 @@ func (s *Name) Decode(r *bytes.Reader) error {
 		return fmt.Errorf("invalid string length: %d", l)
 	}
 	b := make([]byte, l)
-	if _, err := io.ReadAtLeast(r, b, int(l)); err != nil {
+	if _, err := io.ReadFull(r, b); err != nil {
 		return err
 	}
 	*s = Name(b)
@@ -60,15 +60,16 @@ type ChainID uint32
 
 func (c *ChainID) Decode(r *bytes.Reader) error {
 	b := make([]byte, 4)
-	_, err := io.ReadAtLeast(r, b, 4)
+	_, err := io.ReadFull(r, b)
 	if err != nil {
 		return err
 	}
 	*c = ChainID(binary.BigEndian.Uint32(b))
 	// https://github.com/stacksgov/sips/blob/main/sips/sip-005/sip-005-blocks-and-transactions.md#chain-id
-	if *c != 0 && *c != 1 {
-		return fmt.Errorf("invalid chain ID: %x, only valid value is 0x0000", *c)
-	}
+	// Only valid value for mainnet is 0x0. However, on testnets, it seems like Chain IDs can be anything.
+	// if *c != 0 && *c != 1 {
+	// 	return fmt.Errorf("invalid chain ID: %x, only valid values are 0 and 1", *c)
+	// }
 	return nil
 }
 
@@ -148,12 +149,8 @@ func (a *Address) Decode(r *bytes.Reader) error {
 	if err := a.Version.Decode(r); err != nil {
 		return err
 	}
-	n, err := r.Read(a.HashBytes[:])
-	if err != nil {
+	if _, err := io.ReadFull(r, a.HashBytes[:]); err != nil {
 		return err
-	}
-	if n < 20 {
-		return fmt.Errorf("wanted 20 bytes, got %d", n)
 	}
 	return nil
 }
@@ -179,7 +176,7 @@ func (s *SpendingCondition) Decode(r *bytes.Reader) error {
 	if err := s.HashMode.Decode(r); err != nil {
 		return err
 	}
-	if _, err := io.ReadAtLeast(r, s.PubKeyHash[:], 20); err != nil {
+	if _, err := io.ReadFull(r, s.PubKeyHash[:]); err != nil {
 		return err
 	}
 	if err := binary.Read(r, binary.BigEndian, &s.Nonce); err != nil {
@@ -545,6 +542,7 @@ const (
 	// https://github.com/stacksgov/sips/blob/main/sips/sip-015/sip-015-network-upgrade.md
 	CoinbaseToAltRecipient
 	VersionedContractDeploy
+	// https://github.com/stacksgov/sips/blob/main/sips/sip-021/sip-021-nakamoto.md
 	TenureChange
 	NakamotoCoinbase
 )
@@ -593,7 +591,7 @@ func (c *ContractDeployPayload) Decode(r *bytes.Reader) error {
 		return err
 	}
 	body := make([]byte, bodyLen)
-	if _, err := io.ReadAtLeast(r, body, int(bodyLen)); err != nil {
+	if _, err := io.ReadFull(r, body); err != nil {
 		return err
 	}
 	c.CodeBody = string(body)
@@ -645,9 +643,53 @@ type CoinbasePayload struct {
 
 // Implement Decode for CoinbasePayload
 func (c *CoinbasePayload) Decode(r *bytes.Reader) error {
-	if _, err := io.ReadAtLeast(r, c.Buffer[:], 32); err != nil {
+	if _, err := io.ReadFull(r, c.Buffer[:]); err != nil {
 		return err
 	}
+	return nil
+}
+
+type TenureChangeCause byte
+
+const (
+	BlockFound TenureChangeCause = iota
+	Extend
+)
+
+type TenureChangePayload struct {
+	ConsensusHash          [20]byte
+	PrevConsensusHash      [20]byte
+	BurnchainConsensusHash [20]byte
+	PrevTenureEnd          [32]byte
+	Cause                  TenureChangeCause
+	PubkeyHash             [20]byte
+}
+
+// Implement Decode for TenureChangePayload
+func (t *TenureChangePayload) Decode(r *bytes.Reader) error {
+	if _, err := io.ReadFull(r, t.ConsensusHash[:]); err != nil {
+		return err
+	}
+	if _, err := io.ReadFull(r, t.PrevConsensusHash[:]); err != nil {
+		return err
+	}
+	if _, err := io.ReadFull(r, t.BurnchainConsensusHash[:]); err != nil {
+		return err
+	}
+	if _, err := io.ReadFull(r, t.PrevTenureEnd[:]); err != nil {
+		return err
+	}
+
+	cause, err := r.ReadByte()
+	if err != nil {
+		return err
+	}
+	t.Cause = TenureChangeCause(cause)
+
+	if _, err := io.ReadFull(r, t.PubkeyHash[:]); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -658,6 +700,7 @@ type Payload struct {
 	ContractCall            *ContractCallPayload
 	Coinbase                *CoinbasePayload
 	VersionedContractDeploy *VersionedContractDeployPayload
+	TenureChange            *TenureChangePayload
 }
 
 // Implement Decode for Payload
@@ -691,6 +734,14 @@ func (p *Payload) Decode(r *bytes.Reader) error {
 		if err := p.VersionedContractDeploy.Decode(r); err != nil {
 			return err
 		}
+	case TenureChange:
+		p.TenureChange = new(TenureChangePayload)
+		if err := p.TenureChange.Decode(r); err != nil {
+			return err
+		}
+	case NakamotoCoinbase:
+		// not implemented yet, return err
+		return fmt.Errorf("NakamotoCoinbase not implemented")
 	default:
 		return fmt.Errorf("invalid payload type: %x", p.Type)
 	}
@@ -761,7 +812,7 @@ func (saf *SpendingAuthorizationField) Decode(r *bytes.Reader) error {
 		len = 65
 	}
 	saf.Body = make([]byte, len)
-	if _, err := io.ReadAtLeast(r, saf.Body, len); err != nil {
+	if _, err := io.ReadFull(r, saf.Body); err != nil {
 		return err
 	}
 	return nil
