@@ -693,6 +693,23 @@ func (t *TenureChangePayload) Decode(r *bytes.Reader) error {
 	return nil
 }
 
+type NakamotoCoinbasePayload struct {
+	Buffer [32]byte
+	// TODO: add support for optional principal
+	VRFProof [80]byte
+}
+
+// Implement Decode for NakamotoCoinbasePayload
+func (n *NakamotoCoinbasePayload) Decode(r *bytes.Reader) error {
+	if _, err := io.ReadFull(r, n.Buffer[:]); err != nil {
+		return err
+	}
+	if _, err := io.ReadFull(r, n.VRFProof[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
 type Payload struct {
 	Type                    PayloadType
 	Transfer                *STXTransferPayload
@@ -700,6 +717,7 @@ type Payload struct {
 	ContractCall            *ContractCallPayload
 	Coinbase                *CoinbasePayload
 	VersionedContractDeploy *VersionedContractDeployPayload
+	NakamotoCoinbase        *NakamotoCoinbasePayload
 	TenureChange            *TenureChangePayload
 }
 
@@ -740,8 +758,10 @@ func (p *Payload) Decode(r *bytes.Reader) error {
 			return err
 		}
 	case NakamotoCoinbase:
-		// not implemented yet, return err
-		return fmt.Errorf("NakamotoCoinbase not implemented")
+		p.NakamotoCoinbase = new(NakamotoCoinbasePayload)
+		if err := p.NakamotoCoinbase.Decode(r); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("invalid payload type: %x", p.Type)
 	}
