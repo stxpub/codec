@@ -1,5 +1,7 @@
 package codec
 
+//go:generate enumgen
+
 import (
 	"bytes"
 	"encoding/binary"
@@ -32,7 +34,7 @@ func (s *Name) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type NetworkVersion byte
+type NetworkVersion uint8 //enums:enum
 
 // TODO: do the validation during decode but consider
 // preserving the version byte. Instead of the enum, just
@@ -73,7 +75,7 @@ func (c *ChainID) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type AuthorizationType byte
+type AuthorizationType uint8 //enums:enum
 
 const (
 	Standard  AuthorizationType = 0x04
@@ -92,7 +94,7 @@ func (a *AuthorizationType) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type HashMode byte
+type HashMode uint8 //enums:enum
 
 const (
 	// hash160(public-key), same as bitcoin's p2pkh
@@ -119,7 +121,7 @@ func (h *HashMode) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type AddressVersion byte
+type AddressVersion uint8 //enums:enum
 
 const (
 	MainnetSingleSig AddressVersion = 22 // P
@@ -221,7 +223,7 @@ func (a *TransactionAuthorization) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type AnchorMode byte
+type AnchorMode uint8 //enums:enum
 
 const (
 	AnchorBlock AnchorMode = iota + 1
@@ -241,7 +243,7 @@ func (a *AnchorMode) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type PostConditionMode byte
+type PostConditionMode uint8 //enums:enum
 
 const (
 	Allow PostConditionMode = iota + 1
@@ -260,7 +262,7 @@ func (p *PostConditionMode) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type PostConditionType byte
+type PostConditionType uint8 //enums:enum
 
 const (
 	STXPostCondition PostConditionType = iota
@@ -321,7 +323,7 @@ type Principal struct {
 	ContractName Name
 }
 
-type PrincipalType byte
+type PrincipalType uint8 //enums:enum
 
 const (
 	PrincipalStandard PrincipalType = 0x02
@@ -359,7 +361,7 @@ func (p *Principal) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type FungibleConditionCode byte
+type FungibleConditionCode uint8 //enums:enum
 
 const (
 	SentEq FungibleConditionCode = iota + 1
@@ -424,7 +426,7 @@ func (n *FTPostConditionBody) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type NFTConditionCode byte
+type NFTConditionCode uint8 //enums:enum
 
 const (
 	Sent    NFTConditionCode = 0x10
@@ -531,7 +533,7 @@ func (t *Transaction) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type PayloadType byte
+type PayloadType uint8 //enums:enum
 
 const (
 	TokenTransfer PayloadType = iota
@@ -649,7 +651,7 @@ func (c *CoinbasePayload) Decode(r *bytes.Reader) error {
 	return nil
 }
 
-type TenureChangeCause byte
+type TenureChangeCause uint8 //enums:enum
 
 const (
 	BlockFound TenureChangeCause = iota

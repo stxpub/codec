@@ -3,6 +3,8 @@ package codec
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -202,4 +204,19 @@ func TestChainIDDecode(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestJSONEncode(t *testing.T) {
+	const txHex = "00000000010400c1c66bdc612ebf90fd9b343f31f7f1750e50a13b000000000000333b00000000000000c80001989e4de49bada3b7b718d5c329ac6bee4009e1cece5a5268daa7b548af947b0a3edf080e2ea61c05405171b175c3bbcd5c2ef8ce12d81066bad86e019370faf00302000000000005163cbbe96167252efb851181018067a5ae2833e28800000000000000016d6f72616e6765313030300000000000000000000000000000000000000000000000"
+	data, err := hex.DecodeString(txHex)
+	assert.NoError(t, err)
+
+	var tx Transaction
+	err = tx.Decode(bytes.NewReader(data))
+	assert.NoError(t, err)
+
+	// Encode `tx` to JSON and pretty print it
+	b, err := json.MarshalIndent(tx, "", "  ")
+	assert.NoError(t, err)
+	fmt.Println(string(b))
 }

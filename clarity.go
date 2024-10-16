@@ -24,7 +24,7 @@ import (
 // 0x0c: Tuple
 // 0x0d: StringASCII
 // 0x0e: StringUTF8
-type ClarityType byte
+type ClarityType uint8 //enums:enum
 
 const (
 	Int128Signed ClarityType = iota
