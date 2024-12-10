@@ -105,6 +105,10 @@ const (
 	P2WPKH
 	// hash160(segwit-program-00(public-keys)), same as bitcoin's p2sh-p2wsh
 	P2WSH
+	// Non Sequential MultiSig P2SH
+	NSMS_P2SH = 0x05
+	// Non Sequential MultiSig P2WSH-P2SH
+	NSMS_P2WSH = 0x07
 )
 
 func (h *HashMode) Decode(r *bytes.Reader) error {
@@ -113,10 +117,11 @@ func (h *HashMode) Decode(r *bytes.Reader) error {
 		return err
 	}
 	*h = HashMode(b)
-	if *h != P2PKH && *h != P2SH && *h != P2WPKH && *h != P2WSH {
+	if *h != P2PKH && *h != P2SH && *h != P2WPKH && *h != P2WSH &&
+		*h != NSMS_P2SH && *h != NSMS_P2WSH {
 		// return fmt.Errorf("invalid hash mode: %x", *h)
 		// TODO: hash mode / version can be 22 -- figure out what that is and handle it
-		log.Printf("invalid hash mode: %x", *h)
+		log.Printf("invalid hash mode: %d", *h)
 	}
 	return nil
 }
